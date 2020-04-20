@@ -19,14 +19,41 @@ const (
 	ExitCodeError = 1
 )
 
+type StringSlice []string
+
 type GeneratorArgs struct {
 	OutputPath string
 	Interface  string
 	Typed      string
 	Package    string
 	Imports    []string
-	Structs    []string
+	Structs    StringSlice
 	AllArgs    []string
+}
+
+func main() {
+	args, err := parseArguments()
+	if err != nil {
+		exitf(ExitCodeError, "error while parsing arguments: %v\n", err)
+	}
+	buff := bytes.NewBuffer([]byte{})
+	if err := generateCode(args, buff); err != nil {
+		exitf(ExitCodeError, "error while generating code: %v\n", err)
+	}
+
+	code, err := imports.Process(filepath.Dir(args.OutputPath), buff.Bytes(), nil)
+	if err != nil {
+		exitf(ExitCodeError, "error while processing imports: %v\n", err)
+	}
+
+	if args.OutputPath == "stdout" {
+		_, err = os.Stdout.Write(code)
+	} else {
+		err = ioutil.WriteFile(args.OutputPath, code, 0644)
+	}
+	if err != nil {
+		exitf(ExitCodeError, "error while writing code to %s: %v\n", args.OutputPath, err)
+	}
 }
 
 func parseArguments() (*GeneratorArgs, error) {
@@ -35,7 +62,7 @@ func parseArguments() (*GeneratorArgs, error) {
 	flag.StringVar(&ga.Interface, "interface", "", "name of the interface that encompass all types")
 	flag.StringVar(&ga.Typed, "typed", "", "name of struct that will used for typed interface (default to %%interface%%Typed")
 	flag.StringVar(&ga.OutputPath, "output", "", "output path where generated code should be saved")
-	flag.Var(&StringSlice{&ga.Structs}, "structs", "name of structs")
+	flag.Var(&ga.Structs, "structs", "name of structs")
 	flag.Parse()
 
 	if ga.Typed == "" {
@@ -64,34 +91,16 @@ func checkArgs(args *GeneratorArgs) error {
 	return nil
 }
 
+func (v StringSlice) String() string {
+	return strings.Join([]string(v), ",")
+}
+
+func (v *StringSlice) Set(s string) error {
+	*v = StringSlice(strings.Split(s, ","))
+	return nil
+}
+
 func exitf(code int, format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, args...)
 	os.Exit(code)
-}
-
-func main() {
-	args, err := parseArguments()
-	if err != nil {
-		exitf(ExitCodeError, "error while parsing arguments: %v\n", err)
-	}
-	buff := bytes.NewBuffer([]byte{})
-	if err := generateCode(args, buff); err != nil {
-		exitf(ExitCodeError, "error while generating code: %v\n", err)
-	}
-
-	fmt.Printf("%s\n", buff.Bytes())
-
-	code, err := imports.Process(filepath.Dir(args.OutputPath), buff.Bytes(), nil)
-	if err != nil {
-		exitf(ExitCodeError, "error while processing imports: %v\n", err)
-	}
-
-	if args.OutputPath == "stdout" {
-		_, err = os.Stdout.Write(code)
-	} else {
-		err = ioutil.WriteFile(args.OutputPath, code, 0644)
-	}
-	if err != nil {
-		exitf(ExitCodeError, "error while writing code to %s: %v\n", args.OutputPath, err)
-	}
 }
