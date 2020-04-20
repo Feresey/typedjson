@@ -19,15 +19,13 @@ const (
 	ExitCodeError = 1
 )
 
-type StringSlice []string
-
 type GeneratorArgs struct {
 	OutputPath string
 	Interface  string
 	Typed      string
 	Package    string
 	Imports    []string
-	Structs    StringSlice
+	Structs    []string
 	AllArgs    []string
 }
 
@@ -62,8 +60,9 @@ func parseArguments() (*GeneratorArgs, error) {
 	flag.StringVar(&ga.Interface, "interface", "", "name of the interface that encompass all types")
 	flag.StringVar(&ga.Typed, "typed", "", "name of struct that will used for typed interface (default to %%interface%%Typed")
 	flag.StringVar(&ga.OutputPath, "output", "", "output path where generated code should be saved")
-	flag.Var(&ga.Structs, "structs", "name of structs")
 	flag.Parse()
+
+	ga.Structs = flag.Args()
 
 	if ga.Typed == "" {
 		ga.Typed = ga.Interface + "Typed"
@@ -88,15 +87,6 @@ func checkArgs(args *GeneratorArgs) error {
 	if args.OutputPath == "" {
 		return errors.New("output path should not be empty")
 	}
-	return nil
-}
-
-func (v StringSlice) String() string {
-	return strings.Join([]string(v), ",")
-}
-
-func (v *StringSlice) Set(s string) error {
-	*v = StringSlice(strings.Split(s, ","))
 	return nil
 }
 

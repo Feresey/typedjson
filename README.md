@@ -2,7 +2,7 @@
 ```go 
 package main
 
-//go:generate typedjson -interface Data -structs *Foo,*Bar
+//go:generate typedjson -interface Data *Foo *Bar
 type Data interface {
 	typedjson(*DataTyped) string
 }
@@ -18,7 +18,7 @@ type Bar struct {
 }
 ```
 
-After generation you will be able to use your `Foo` and `Bar in typed manner:
+After generation you will be able to use your `Foo` and `Bar` in typed manner:
 
 ```go 
 func main() {
